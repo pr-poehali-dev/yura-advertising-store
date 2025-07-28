@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import Icon from '@/components/ui/icon';
 
@@ -31,16 +33,18 @@ interface OrderForm {
 }
 
 const Index = () => {
+  const { user, addOrder, logout } = useAuth();
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
   const [orderForm, setOrderForm] = useState<OrderForm>({
-    name: '',
-    email: '',
-    phone: '',
-    company: '',
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    company: user?.company || '',
     budget: '',
     message: ''
   });
@@ -175,18 +179,45 @@ const Index = () => {
 
   const handleOrderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically send the order to your backend
+    
+    if (!user) {
+      toast({
+        title: "Необходима авторизация",
+        description: "Войдите в аккаунт для оформления заказа",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
+    }
+
+    // Create order
+    const orderData = {
+      items: cart.map(item => ({
+        id: item.id,
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity
+      })),
+      totalAmount: getTotalPrice(),
+      status: 'pending' as const,
+      budget: orderForm.budget,
+      message: orderForm.message
+    };
+
+    addOrder(orderData);
+    
     toast({
-      title: "Заказ отправлен!",
-      description: "Мы свяжемся с вами в течение часа для уточнения деталей.",
+      title: "Заказ оформлен!",
+      description: "Мы свяжемся с вами в течение часа. Просмотреть заказ можно в личном кабинете.",
     });
+    
     setIsOrderFormOpen(false);
     setCart([]);
     setOrderForm({
-      name: '',
-      email: '',
-      phone: '',
-      company: '',
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      company: user?.company || '',
       budget: '',
       message: ''
     });
@@ -314,7 +345,34 @@ const Index = () => {
                   </div>
                 </SheetContent>
               </Sheet>
-              <Button>Связаться с нами</Button>
+              {user ? (
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-600">Привет, {user.name}!</span>
+                  <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                    <Icon name="User" size={16} className="mr-2" />
+                    Личный кабинет
+                  </Button>
+                  <Button variant="outline" onClick={logout}>
+                    <Icon name="LogOut" size={16} className="mr-2" />
+                    Выйти
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <Link to="/login">
+                    <Button variant="outline">
+                      <Icon name="LogIn" size={16} className="mr-2" />
+                      Войти
+                    </Button>
+                  </Link>
+                  <Link to="/register">
+                    <Button>
+                      <Icon name="UserPlus" size={16} className="mr-2" />
+                      Регистрация
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
