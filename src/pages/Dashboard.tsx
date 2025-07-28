@@ -225,10 +225,25 @@ const Dashboard = () => {
                               Детали
                             </Button>
                             {order.status === 'pending' && (
-                              <Button variant="outline" size="sm">
-                                <Icon name="X" size={14} className="mr-1" />
-                                Отменить
-                              </Button>
+                              <>
+                                <Button 
+                                  size="sm"
+                                  onClick={() => navigate(`/payment?orderId=${order.id}`)}
+                                >
+                                  <Icon name="CreditCard" size={14} className="mr-1" />
+                                  Оплатить
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                  <Icon name="X" size={14} className="mr-1" />
+                                  Отменить
+                                </Button>
+                              </>
+                            )}
+                            {order.status === 'confirmed' && (
+                              <Badge variant="secondary">
+                                <Icon name="Clock" size={12} className="mr-1" />
+                                Оплачен, в работе
+                              </Badge>
                             )}
                           </div>
                         </div>

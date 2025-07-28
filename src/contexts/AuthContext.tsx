@@ -33,6 +33,7 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (userData: Partial<User>) => void;
   addOrder: (order: Omit<Order, 'id' | 'userId' | 'createdAt'>) => void;
+  updateOrderStatus: (orderId: string, status: Order['status']) => void;
 }
 
 interface RegisterData {
@@ -177,6 +178,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateOrderStatus = (orderId: string, status: Order['status']) => {
+    setOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.id === orderId ? { ...order, status } : order
+      )
+    );
+  };
+
   const value: AuthContextType = {
     user,
     orders: user ? orders.filter(order => order.userId === user.id) : [],
@@ -184,7 +193,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     updateProfile,
-    addOrder
+    addOrder,
+    updateOrderStatus
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
