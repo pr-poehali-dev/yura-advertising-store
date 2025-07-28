@@ -1,15 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/hooks/use-toast";
 import Icon from '@/components/ui/icon';
+
+interface CartItem {
+  id: number;
+  title: string;
+  price: string;
+  priceNumeric: number;
+  quantity: number;
+}
+
+interface OrderForm {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  budget: string;
+  message: string;
+}
 
 const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
+  const [orderForm, setOrderForm] = useState<OrderForm>({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    budget: '',
+    message: ''
+  });
 
   const categories = [
     { id: 'all', name: 'Все услуги' },
@@ -25,6 +59,7 @@ const Index = () => {
       title: 'Google Ads',
       description: 'Контекстная реклама в поисковой системе Google',
       price: 'от 15 000 ₽',
+      priceNumeric: 15000,
       category: 'contextual',
       features: ['Настройка кампаний', 'Подбор ключевых слов', 'Аналитика'],
       popularity: 'Популярно',
@@ -34,6 +69,7 @@ const Index = () => {
       title: 'Яндекс.Директ',
       description: 'Реклама в поисковой системе Яндекс и РСЯ',
       price: 'от 12 000 ₽',
+      priceNumeric: 12000,
       category: 'contextual',
       features: ['Поиск и РСЯ', 'Оптимизация', 'Отчёты'],
       popularity: 'Хит продаж',
@@ -43,6 +79,7 @@ const Index = () => {
       title: 'Facebook & Instagram',
       description: 'Таргетированная реклама в социальных сетях Meta',
       price: 'от 20 000 ₽',
+      priceNumeric: 20000,
       category: 'social',
       features: ['Настройка аудиторий', 'Креативы', 'A/B тестирование'],
       popularity: null,
@@ -52,6 +89,7 @@ const Index = () => {
       title: 'ВКонтакте Реклама',
       description: 'Продвижение в крупнейшей социальной сети России',
       price: 'от 10 000 ₽',
+      priceNumeric: 10000,
       category: 'social',
       features: ['Таргетинг по интересам', 'Ретаргетинг', 'Сообщества'],
       popularity: null,
@@ -61,6 +99,7 @@ const Index = () => {
       title: 'YouTube Ads',
       description: 'Видеореклама на крупнейшей видеоплатформе',
       price: 'от 25 000 ₽',
+      priceNumeric: 25000,
       category: 'video',
       features: ['TrueView реклама', 'Bumper ads', 'Аналитика'],
       popularity: 'Новинка',
@@ -70,11 +109,88 @@ const Index = () => {
       title: 'Медийная реклама',
       description: 'Баннерная реклама на популярных сайтах',
       price: 'от 18 000 ₽',
+      priceNumeric: 18000,
       category: 'display',
       features: ['RTB закупки', 'Ретаргетинг', 'Креативы'],
       popularity: null,
     },
   ];
+
+  // Cart functionality
+  useEffect(() => {
+    const savedCart = localStorage.getItem('adstore-cart');
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('adstore-cart', JSON.stringify(cart));
+  }, [cart]);
+
+  const addToCart = (service: typeof services[0]) => {
+    const existingItem = cart.find(item => item.id === service.id);
+    if (existingItem) {
+      setCart(cart.map(item => 
+        item.id === service.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      setCart([...cart, {
+        id: service.id,
+        title: service.title,
+        price: service.price,
+        priceNumeric: service.priceNumeric,
+        quantity: 1
+      }]);
+    }
+    toast({
+      title: "Услуга добавлена в корзину",
+      description: `${service.title} добавлен в корзину`,
+    });
+  };
+
+  const removeFromCart = (id: number) => {
+    setCart(cart.filter(item => item.id !== id));
+  };
+
+  const updateQuantity = (id: number, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(id);
+      return;
+    }
+    setCart(cart.map(item => 
+      item.id === id ? { ...item, quantity } : item
+    ));
+  };
+
+  const getTotalPrice = () => {
+    return cart.reduce((total, item) => total + (item.priceNumeric * item.quantity), 0);
+  };
+
+  const getTotalItems = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const handleOrderSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Here you would typically send the order to your backend
+    toast({
+      title: "Заказ отправлен!",
+      description: "Мы свяжемся с вами в течение часа для уточнения деталей.",
+    });
+    setIsOrderFormOpen(false);
+    setCart([]);
+    setOrderForm({
+      name: '',
+      email: '',
+      phone: '',
+      company: '',
+      budget: '',
+      message: ''
+    });
+  };
 
   const filteredServices = services.filter(service => {
     const matchesCategory = selectedCategory === 'all' || service.category === selectedCategory;
@@ -117,7 +233,89 @@ const Index = () => {
               <a href="#about" className="text-gray-700 hover:text-primary transition-colors">О нас</a>
               <a href="#faq" className="text-gray-700 hover:text-primary transition-colors">FAQ</a>
             </nav>
-            <Button>Связаться с нами</Button>
+            <div className="flex items-center space-x-4">
+              <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="relative">
+                    <Icon name="ShoppingCart" size={20} className="mr-2" />
+                    Корзина
+                    {getTotalItems() > 0 && (
+                      <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                        {getTotalItems()}
+                      </Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-[400px] sm:w-[540px]">
+                  <SheetHeader>
+                    <SheetTitle>Корзина</SheetTitle>
+                    <SheetDescription>
+                      {cart.length === 0 ? 'Ваша корзина пуста' : `В корзине ${getTotalItems()} услуг`}
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-6 space-y-4">
+                    {cart.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Icon name="ShoppingCart" size={48} className="mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-500">Добавьте услуги в корзину</p>
+                      </div>
+                    ) : (
+                      <>
+                        {cart.map(item => (
+                          <div key={item.id} className="flex items-center justify-between py-4 border-b">
+                            <div className="flex-1">
+                              <h4 className="font-medium">{item.title}</h4>
+                              <p className="text-sm text-gray-500">{item.price}</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              >
+                                <Icon name="Minus" size={14} />
+                              </Button>
+                              <span className="w-8 text-center">{item.quantity}</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              >
+                                <Icon name="Plus" size={14} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFromCart(item.id)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Icon name="Trash2" size={14} />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        <Separator />
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center font-bold text-lg">
+                            <span>Итого:</span>
+                            <span>{getTotalPrice().toLocaleString()} ₽</span>
+                          </div>
+                          <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
+                            <DialogTrigger asChild>
+                              <Button className="w-full" size="lg">
+                                <Icon name="CreditCard" size={20} className="mr-2" />
+                                Оформить заказ
+                              </Button>
+                            </DialogTrigger>
+                          </Dialog>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <Button>Связаться с нами</Button>
+            </div>
           </div>
         </div>
       </header>
@@ -205,9 +403,12 @@ const Index = () => {
                         </li>
                       ))}
                     </ul>
-                    <Button className="w-full">
+                    <Button 
+                      className="w-full"
+                      onClick={() => addToCart(service)}
+                    >
                       <Icon name="ShoppingCart" size={16} className="mr-2" />
-                      Заказать услугу
+                      Добавить в корзину
                     </Button>
                   </div>
                 </CardContent>
@@ -347,6 +548,119 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      {/* Order Form Dialog */}
+      <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Оформление заказа</DialogTitle>
+            <DialogDescription>
+              Заполните форму, и мы свяжемся с вами для обсуждения деталей.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleOrderSubmit} className="space-y-4">
+            <div className="space-y-4">
+              <h4 className="font-semibold">Выбранные услуги:</h4>
+              {cart.map(item => (
+                <div key={item.id} className="flex justify-between items-center py-2 border-b">
+                  <span>{item.title} (x{item.quantity})</span>
+                  <span className="font-medium">{(item.priceNumeric * item.quantity).toLocaleString()} ₽</span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center font-bold text-lg pt-2">
+                <span>Итого:</span>
+                <span>{getTotalPrice().toLocaleString()} ₽</span>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Имя *</Label>
+                <Input
+                  id="name"
+                  value={orderForm.name}
+                  onChange={(e) => setOrderForm({...orderForm, name: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={orderForm.email}
+                  onChange={(e) => setOrderForm({...orderForm, email: e.target.value})}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="phone">Телефон *</Label>
+                <Input
+                  id="phone"
+                  value={orderForm.phone}
+                  onChange={(e) => setOrderForm({...orderForm, phone: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="company">Компания</Label>
+                <Input
+                  id="company"
+                  value={orderForm.company}
+                  onChange={(e) => setOrderForm({...orderForm, company: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="budget">Планируемый бюджет</Label>
+              <Select value={orderForm.budget} onValueChange={(value) => setOrderForm({...orderForm, budget: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите бюджет" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50000">До 50 000 ₽</SelectItem>
+                  <SelectItem value="100000">50 000 - 100 000 ₽</SelectItem>
+                  <SelectItem value="250000">100 000 - 250 000 ₽</SelectItem>
+                  <SelectItem value="500000">250 000 - 500 000 ₽</SelectItem>
+                  <SelectItem value="1000000">500 000 - 1 000 000 ₽</SelectItem>
+                  <SelectItem value="more">Больше 1 000 000 ₽</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="message">Комментарий</Label>
+              <Textarea
+                id="message"
+                placeholder="Расскажите о ваших целях и особенностях проекта..."
+                value={orderForm.message}
+                onChange={(e) => setOrderForm({...orderForm, message: e.target.value})}
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-4 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsOrderFormOpen(false)}
+              >
+                Отмена
+              </Button>
+              <Button type="submit">
+                <Icon name="Send" size={16} className="mr-2" />
+                Отправить заказ
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
